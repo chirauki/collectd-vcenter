@@ -3,7 +3,7 @@
 # Author : Loic Lambiel @ exoscale
 # Description : This is a collectd python module to gather stats from Vmware vcenter
 
-import collectd
+import collectd, ssl
 from pysphere import VIServer
 
 RUN = 0
@@ -72,6 +72,10 @@ def get_stats():
         server = VIServer()
 
         try:
+            # Untrusted vSphere certificate bypass
+            # SSL: CERTIFICATE_VERIFY_FAILED
+            default_context = ssl._create_default_https_context
+            ssl._create_default_https_context = ssl._create_unverified_context
             server.connect(vcenter, USERNAME, PASSWORD)
         except Exception:
             logger('warn', "failed to connect to %s" % (vcenter))
@@ -99,7 +103,7 @@ def get_stats():
             except Exception:
                 logger('warn', "failed to get Datastore metrics value on vcenter: %s for datastore: %s" % (vcenter, dsname))
 
-            DatastoreUsagePercent = (((DatastoreCapacity - DatastoreFreespace) * 100) / DatastoreCapacity)
+            DatastoreUsagePercent = (((DatastoreCapacity - DatastoreFreespace) * 100) / DatastoreCapacity) if DatastoreCapacity > 0 else 0
 
             metricnameZoneDatastoreCapacity = METRIC_DELIM.join([vcenter.lower(), "datastores",  dsname.lower(), 'datastorecapacity'])
             metricnameZoneDatastoreFreespace = METRIC_DELIM.join([vcenter.lower(), "datastores", dsname.lower(), 'datastorefreespace'])
